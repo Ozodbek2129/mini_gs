@@ -1,0 +1,75 @@
+{
+  "datas": {
+    "charxpalak_down": 0,
+    "charxpalak_down_konsevik": 0,
+    "charxpalak_up": 0,
+    "charxpalak_up_konsevik": 0,
+    "Авария": 0,
+    "авария": 0,
+    "автомат_выкл_akumlator": 0,
+    "автомат_выкл_chastotnik_1": 0,
+    "автомат_выкл_chastotnik_2": 0,
+    "автомат_выкл_panel": 0,
+    "автомат_выкл_ввод": 0,
+    "автомат_выкл_генератор": 0,
+    "автомат_выкл_солнеч_инвер": 0,
+    "автомат_выкл_шин_DC_controller": 0,
+    "глконтактор": 0,
+    "готовность": 0,
+    "охл_шкафа": 0,
+    "перезагрузка_ПК": 0,
+    "прожектор": 0,
+    "работа": 0,
+    "сигнализация": 0,
+    "уревон_воды": 0
+  },
+  "namlik_temp": {
+    "ichki_real_namlik": 0,
+    "ichki_real_temp": 0,
+    "tashqi_real_namlik": 0,
+    "tashqi_real_temp": 0
+  },
+  "read_VFD_1": {
+    "READ_DC_BUS": 0,
+    "READ_FREQUENCY": 0,
+    "READ_OUTPUT_CURRENT": 0,
+    "READ_OUTPUT_VOLTAGE": 0,
+    "READ_POWER": 0,
+    "READ_RPM": 0,
+    "READ_SET_FREQUENCY": 0,
+    "READ_TORQUE": 0
+  },
+  "read_VFD_2": {
+    "READ_DC_BUS2": 0,
+    "READ_FREQUENCY2": 0,
+    "READ_OUTPUT_CURRENT2": 0,
+    "READ_OUTPUT_VOLTAGE2": 0,
+    "READ_POWER2": 0,
+    "READ_RPM2": 0,
+    "READ_SET_FREQUENCY2": 0,
+    "READ_TORQUE2": 0
+  },
+  "wind_2": {
+    "active_power": 0,
+    "elektr_1_yillik": 0,
+    "elektr_kunlik": 0,
+    "elektr_otgan_oylik": 0,
+    "elektr_otgan_yilgi": 0,
+    "elektr_oylik": 0,
+    "energiya_kechagi": 0,
+    "output_power": 0,
+    "rated_speed": 0,
+    "rating": 0,
+    "starting_RPM": 0,
+    "starting_power": 0,
+    "total_generating_capacity": 0
+  },
+  "wind_controller": {
+    "genarator_voltage": 0,
+    "generator_current": 0,
+    "havo_tezligi": 0,
+    "modul_temperatura": 0,
+    "rpm": 0,
+    "shassi_temperatura": 0
+  }
+}
