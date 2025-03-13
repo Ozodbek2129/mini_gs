@@ -2,7 +2,11 @@ module gs
 
 go 1.23.4
 
-require github.com/gin-gonic/gin v1.10.0
+require (
+	github.com/fsnotify/fsnotify v1.8.0
+	github.com/gin-gonic/gin v1.10.0
+	github.com/gorilla/websocket v1.5.3
+)
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

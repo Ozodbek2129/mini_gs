@@ -5,3 +5,4 @@ services:
       - "9090:9090"
     environment:
       - GIN_MODE=release
+    restart: always
