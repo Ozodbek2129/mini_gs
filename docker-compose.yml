@@ -28,6 +28,6 @@ services:
     restart: always
 
   networks:
-  app_network:
-    driver: bridge
-
+    app_network:
+      driver: bridge
+      external: true
