@@ -20,5 +20,5 @@ COPY --from=builder /app/main .
 
 COPY --from=builder /app/datas.json  ./datas.json
 COPY --from=builder /app/micro_gs.json  ./micro_gs.json 
-
+COPY --from=builder /app/email/template.html ./email/
 CMD ["./main"]

@@ -1,4 +1,51 @@
 services:
+  postgres-db:
+    container_name: postgress  
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=gs
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/data/postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 3s
+    networks:
+      - app_network
+    restart: always
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 3s
+    networks:
+      - app_network
+    restart: always
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    command: ["-path", "./migrations", "-database", "postgres://postgres:1234@postgress:5432/gs?sslmode=disable", "up"]  
+    networks:
+      - app_network
+
   app:
     build: .
     ports:
@@ -6,3 +53,10 @@ services:
     environment:
       - GIN_MODE=release
     restart: always
+  
+  volumes:
+  db:
+
+networks:
+  app_network:
+    driver: bridge
