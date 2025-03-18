@@ -4,7 +4,9 @@ services:
     ports:
       - "9090:9090"
     environment:
-      - GIN_MODE=release
+      - DATABASE_URL=postgres://postgres:1234@postgress:5432/postgres?sslmode=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     restart: always
     depends_on:
       postgres-db:
