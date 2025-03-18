@@ -1,15 +1,4 @@
 services:
-  migrate:
-    image: migrate/migrate
-    volumes:
-      - ./migrations:/migrations
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-    command: ["-path", "./migrations", "-database", "postgres://postgres:1234@postgres-db:5432/gs?sslmode=disable", "up"]  
-    networks:
-      - app_network
-
   app:
     build: .
     ports:
