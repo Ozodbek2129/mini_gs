@@ -53,6 +53,11 @@ services:
     environment:
       - GIN_MODE=release
     restart: always
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app_network
 
