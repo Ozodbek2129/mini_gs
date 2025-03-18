@@ -1,33 +1,61 @@
 services:
+  postgres-db2:
+    container_name: postgress2  
+    image: postgres2:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=gs
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/data/postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 3s
+    networks:
+      - app_network
+    restart: always
+
+  redis2:
+    image: redis2
+    container_name: redis2
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 3s
+    networks:
+      - app_network
+    restart: always
+
   migrate:
     image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
     depends_on:
-      postgres-db:
+      postgres-db2:
         condition: service_healthy
-    command: ["-path", "./migrations", "-database", "postgres://postgres:1234@postgres-db:5432/asror_gps?sslmode=disable", "up"]  
+    command: ["-path", "./migrations", "-database", "postgres://postgres:1234@postgress2:5432/gs?sslmode=disable", "up"]  
     networks:
       - app_network
 
   app:
     build: .
-    container_name: asror_gps
     ports:
-      - "5000:5000"
+      - "9090:9090"
     environment:
-      - DATABASE_URL=postgres://postgres:1234@postgres-db:5432/asror_gps?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      postgres-db:
+      - GIN_MODE=release
+    postgres-db2:
         condition: service_healthy
-      migrate:
-        condition: service_started
-      redis:
+    redis2:
         condition: service_healthy
+    restart: always
     networks:
       - app_network
-    restart: always
-
-  networks:
-    app_network:
-      driver: bridge
-      external: true
