@@ -9,7 +9,7 @@ services:
       - POSTGRES_PASSWORD=1234
       - POSTGRES_DB=gs
     ports:
-      - "5432:5432"
+      - "5433:5433"
     volumes:
       - db:/data/postgres
     healthcheck:
