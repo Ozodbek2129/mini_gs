@@ -1,7 +1,7 @@
 services:
   postgres-db2:
     container_name: postgress2  
-    image: postgres2:16
+    image: postgres:16
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=1234
@@ -21,7 +21,7 @@ services:
     restart: always
 
   redis2:
-    image: redis2
+    image: redis
     container_name: redis2
     ports:
       - "6379:6379"
