@@ -55,7 +55,7 @@ services:
     restart: always
   
   volumes:
-  db:
+    db:
 
 networks:
   app_network:
