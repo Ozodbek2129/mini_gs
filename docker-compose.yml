@@ -7,11 +7,6 @@ services:
       - DATABASE_URL=postgres://postgres:1234@postgres:5432/postgres?sslmode=disable
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: always
     networks:
       - app_network
