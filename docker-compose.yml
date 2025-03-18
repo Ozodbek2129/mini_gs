@@ -1,7 +1,9 @@
+version: '3.8'
+
 services:
   postgres-db2:
     container_name: postgress2  
-    image: postgres:16
+    image: postgres:16  # ❌ "postgres2:16" degan image yo'q, to'g'ri image nomi "postgres:16"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=1234
@@ -21,7 +23,7 @@ services:
     restart: always
 
   redis2:
-    image: redis
+    image: redis  # ❌ "redis2" degan image yo'q, to'g'ri image nomi "redis"
     container_name: redis2
     ports:
       - "6379:6379"
@@ -52,10 +54,18 @@ services:
       - "9090:9090"
     environment:
       - GIN_MODE=release
-    postgres-db2:
+    depends_on:
+      postgres-db2:
         condition: service_healthy
-    redis2:
+      redis2:
         condition: service_healthy
     restart: always
     networks:
       - app_network
+
+volumes:
+  db:
+
+networks:
+  app_network:
+    driver: bridge
