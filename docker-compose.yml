@@ -26,7 +26,7 @@ services:
     image: redis  # ❌ "redis2" degan image yo'q, to'g'ri image nomi "redis"
     container_name: redis2
     ports:
-      - "6379:6379"
+      - "6380:6380"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
