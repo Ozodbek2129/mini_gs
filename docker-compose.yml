@@ -53,9 +53,12 @@ services:
     environment:
       - GIN_MODE=release
     restart: always
-  
-  volumes:
-    db:
+    networks:
+      - app_network
+
+volumes:
+  db:
+    driver: local
 
 networks:
   app_network:
