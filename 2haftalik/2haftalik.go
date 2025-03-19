@@ -1,9 +1,10 @@
 package haftalik2
 
 import (
+	"crypto/md5"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -81,6 +82,24 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (h *Haftalik2Struct) sendUpdatedData(conn *websocket.Conn) {
+	data, err := h.getHaftalikData() // Bazadan so'nggi ma'lumotlarni olish
+	if err != nil {
+		log.Println("Ma'lumotni olishda xato:", err)
+		return
+	}
+
+	err = conn.WriteJSON(data) // Mijozga JSON formatida jo‘natish
+	if err != nil {
+		log.Println("WebSocket orqali ma'lumot yuborishda xato:", err)
+		conn.Close()
+		h.mu.Lock()
+		delete(h.clients, conn)
+		h.mu.Unlock()
+	}
+}
+
+// 📌 WebSocket handler (Mijoz ulanadi)
 func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -95,6 +114,7 @@ func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 	log.Println("Yangi mijoz ulandi")
 	h.sendUpdatedData(conn)
 
+	// Mijoz uzilganda o‘chirish
 	go func() {
 		defer func() {
 			h.mu.Lock()
@@ -111,15 +131,7 @@ func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 	}()
 }
 
-func (h *Haftalik2Struct) sendUpdatedData(conn *websocket.Conn) {
-	data, err := h.getHaftalikData()
-	if err != nil {
-		log.Println("Ma'lumotni olishda xato:", err)
-		return
-	}
-	conn.WriteJSON(data)
-}
-
+// 📌 WebSocket orqali barcha mijozlarga yangilangan ma'lumotlarni yuborish
 func (h *Haftalik2Struct) BroadcastUpdate() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -144,9 +156,48 @@ func (h *Haftalik2Struct) BroadcastUpdate() {
 	}
 }
 
+// 📌 PostgreSQL `LISTEN` orqali bazadagi o‘zgarishlarni kuzatish
+func (h *Haftalik2Struct) StartDatabaseListener() {
+	conn, err := h.db.Conn(nil)
+	if err != nil {
+		log.Fatal("PostgreSQL bilan ulanishda xato:", err)
+	}
+	defer conn.Close()
+
+	_, err = conn.ExecContext(nil, "LISTEN haftalik2_changes")
+	if err != nil {
+		log.Fatal("LISTEN buyrug'ini yuborishda xato:", err)
+	}
+
+	log.Println("🔍 PostgreSQL NOTIFY xabarlarini tinglash boshlandi...")
+
+	for {
+		notification, err := h.db.Query("SELECT pg_sleep(1), 1 FROM pg_notification_queue()")
+		if err != nil {
+			log.Println("Xatolik: ", err)
+			continue
+		}
+		defer notification.Close()
+
+		h.BroadcastUpdate()
+	}
+}
+
+// 📌 Bazadan 14 kunlik ma'lumotlarni olish
 func (h *Haftalik2Struct) getHaftalikData() ([]Haftalik2Repo, error) {
-	query := `SELECT date, day, quantity FROM haftalik2 WHERE deleted_at IS NULL AND date >= NOW() - INTERVAL '14 days' ORDER BY date ASC`
-	rows, err := h.db.Query(query)
+	today := time.Now().Format("2006-01-02")
+	twoWeeksAgo := time.Now().AddDate(0, 0, -14).Format("2006-01-02")
+
+	log.Println("Bugungi sana:", today)
+	log.Println("14 kun oldingi sana:", twoWeeksAgo)
+
+	query := `SELECT date, day, quantity 
+	          FROM haftalik2 
+	          WHERE deleted_at IS NULL 
+	          AND date BETWEEN $1 AND $2
+	          ORDER BY date ASC`
+
+	rows, err := h.db.Query(query, twoWeeksAgo, today)
 	if err != nil {
 		return nil, err
 	}
@@ -160,14 +211,33 @@ func (h *Haftalik2Struct) getHaftalikData() ([]Haftalik2Repo, error) {
 		}
 		results = append(results, record)
 	}
+
 	return results, nil
 }
 
+// 📌 Ma'lumotlarni hash qilish (o'zgarishlarni tekshirish uchun)
+func hashData(data []Haftalik2Repo) string {
+	jsonData, _ := json.Marshal(data)
+	hash := md5.Sum(jsonData)
+	return hex.EncodeToString(hash[:])
+}
+
+
 func (h *Haftalik2Struct) Get2Haftalik(c *gin.Context) {
-	query := `SELECT date, day, quantity FROM haftalik2 WHERE deleted_at IS NULL AND date >= NOW() - INTERVAL '14 days' ORDER BY date ASC`
-	rows, err := h.db.Query(query)
+	today := time.Now().Format("2006-01-02")
+
+	twoWeeksAgo := time.Now().AddDate(0, 0, -14).Format("2006-01-02")
+	log.Println("Bugungi sana:", today)
+	log.Println("14 kun oldingi sana:", twoWeeksAgo)
+
+	query := `SELECT date, day, quantity 
+	          FROM haftalik2 
+	          WHERE deleted_at IS NULL 
+	          AND date BETWEEN $1 AND $2
+	          ORDER BY date ASC`
+
+	rows, err := h.db.Query(query, twoWeeksAgo, today)
 	if err != nil {
-		fmt.Println(err)
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
