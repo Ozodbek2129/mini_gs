@@ -1,6 +1,7 @@
 package haftalik2
 
 import (
+	"context"
 	"crypto/md5"
 	"database/sql"
 	"encoding/hex"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/gorilla/websocket"
 )
 
@@ -158,27 +160,31 @@ func (h *Haftalik2Struct) BroadcastUpdate() {
 
 // 📌 PostgreSQL `LISTEN` orqali bazadagi o‘zgarishlarni kuzatish
 func (h *Haftalik2Struct) StartDatabaseListener() {
-	conn, err := h.db.Conn(nil)
+	// PostgreSQL ulanishi
+	conn, err := pgx.Connect(context.Background(), "postgres://postgres:password@localhost:5432/dbname")
 	if err != nil {
 		log.Fatal("PostgreSQL bilan ulanishda xato:", err)
 	}
-	defer conn.Close()
+	defer conn.Close(context.Background())
 
-	_, err = conn.ExecContext(nil, "LISTEN haftalik2_changes")
+	// `LISTEN` buyrug‘ini yuborish
+	_, err = conn.Exec(context.Background(), "LISTEN haftalik2_changes")
 	if err != nil {
 		log.Fatal("LISTEN buyrug'ini yuborishda xato:", err)
 	}
 
 	log.Println("🔍 PostgreSQL NOTIFY xabarlarini tinglash boshlandi...")
 
+	// NOTIFY xabarlarini tinglash
 	for {
-		notification, err := h.db.Query("SELECT pg_sleep(1), 1 FROM pg_notification_queue()")
+		notification, err := conn.WaitForNotification(context.Background())
 		if err != nil {
 			log.Println("Xatolik: ", err)
 			continue
 		}
-		defer notification.Close()
+		log.Println("📢 Yangi NOTIFY xabari keldi:", notification.Payload)
 
+		// WebSocket orqali barcha mijozlarga xabar yuborish
 		h.BroadcastUpdate()
 	}
 }
@@ -221,7 +227,6 @@ func hashData(data []Haftalik2Repo) string {
 	hash := md5.Sum(jsonData)
 	return hex.EncodeToString(hash[:])
 }
-
 
 func (h *Haftalik2Struct) Get2Haftalik(c *gin.Context) {
 	today := time.Now().Format("2006-01-02")

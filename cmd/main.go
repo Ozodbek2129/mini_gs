@@ -32,6 +32,7 @@ func main() {
 
 	go micro_gs_data_blok_read.StartFileWatcher()
 	go dataspost.StartFileWatcher_datas()
+	go haftalik.StartDatabaseListener()
 
 	router.GET("/micro_gs_data_blok_read", micro_gs_data_blok_read.MicroGsDataBlokRead)
 	router.POST("/micro_gs_data_blok_post", micro_gs_data_blok_read.MicroGsDataBlokPost)
