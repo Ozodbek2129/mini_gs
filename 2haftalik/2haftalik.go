@@ -161,7 +161,7 @@ func (h *Haftalik2Struct) BroadcastUpdate() {
 // 📌 PostgreSQL `LISTEN` orqali bazadagi o‘zgarishlarni kuzatish
 func (h *Haftalik2Struct) StartDatabaseListener() {
 	// PostgreSQL ulanishi
-	conn, err := pgx.Connect(context.Background(), "postgres://postgres:password@localhost:5432/dbname")
+	conn, err := pgx.Connect(context.Background(), "postgres://postgres:1234@postgress2:5432/postgres")
 	if err != nil {
 		log.Fatal("PostgreSQL bilan ulanishda xato:", err)
 	}
