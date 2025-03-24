@@ -1,6 +1,7 @@
 package main
 
 import (
+	minigs12 "gs/1_2_minigs"
 	haftalik2 "gs/2haftalik"
 	"gs/baza"
 	"gs/booling"
@@ -32,6 +33,7 @@ func main() {
 	go micro_gs_data_blok_read.StartFileWatcher()
 	go dataspost.StartFileWatcher_datas()
 	go haftalik.StartDatabaseListener()
+	go minigs12.StartFileWatcher_minigs12()
 
 	router.GET("/micro_gs_data_blok_read", micro_gs_data_blok_read.MicroGsDataBlokRead)
 	router.POST("/micro_gs_data_blok_post", micro_gs_data_blok_read.MicroGsDataBlokPost)
@@ -54,6 +56,10 @@ func main() {
 
 	router.POST("/booling_post", booling.BoolingPost)
 	router.GET("/booling_get", booling.BoolingRead)
+
+	router.POST("/minigs12_post",minigs12.Minigs12Post)
+	router.GET("/minigs12_get",minigs12.Minigs12Read)
+	router.GET("/minigs12_ws",minigs12.WebSocketHandler_minigs12)
 
 	router.Run(":9090")
 }
