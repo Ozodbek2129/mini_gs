@@ -3,6 +3,7 @@ package main
 import (
 	haftalik2 "gs/2haftalik"
 	"gs/baza"
+	"gs/booling"
 	corss "gs/cors"
 	dataspost "gs/datas_post"
 	"gs/micro_gs_data_blok_read"
@@ -22,9 +23,7 @@ func main() {
 	defer db.Close()
 
 	rdb := baza.ConnectDB()
-	if err != nil {
-		panic(err)
-	}
+	
 	defer rdb.Close()
 
 	newfunc := baza.NewBazaStruct(db, rdb)
@@ -52,6 +51,9 @@ func main() {
 	router.POST("/haftalik2post", haftalik.Haftalik2)
 	router.GET("/haftalik2ws", haftalik.WebSocketHandler)
 	router.GET("/haftalik2get", haftalik.Get2Haftalik)
+
+	router.POST("/booling_post", booling.BoolingPost)
+	router.GET("/booling_get", booling.BoolingRead)
 
 	router.Run(":9090")
 }

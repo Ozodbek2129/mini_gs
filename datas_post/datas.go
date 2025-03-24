@@ -2,15 +2,14 @@ package dataspost
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/fsnotify/fsnotify"
 )
 
 var mu sync.Mutex
@@ -56,8 +55,6 @@ func DatasPost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	fmt.Println(data)
 
 	data1, err := readJSONFile()
 	if err != nil {

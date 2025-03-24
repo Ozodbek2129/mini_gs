@@ -11,7 +11,7 @@ services:
     ports:
       - "5433:5432" # Docker konteyner ichida PostgreSQL 5432 portda ishlaydi
     volumes:
-      - db:/data/postgres
+      - db_data:/var/lib/postgresql/data # Ma'lumotlarni saqlash uchun volume
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
@@ -64,7 +64,7 @@ services:
       - app_network
 
 volumes:
-  db:
+  db_data: # Bu volume PostgreSQL ma'lumotlarini saqlash uchun ishlatiladi
 
 networks:
   app_network:
