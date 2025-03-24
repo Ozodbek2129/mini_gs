@@ -8,19 +8,17 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5"
 )
 
 type Haftalik2Struct struct {
 	db      *sql.DB
 	clients map[*websocket.Conn]bool
-	mu      sync.Mutex
 }
 
 func NewHaftalik2Struct(db *sql.DB) *Haftalik2Struct {
@@ -95,9 +93,7 @@ func (h *Haftalik2Struct) sendUpdatedData(conn *websocket.Conn) {
 	if err != nil {
 		log.Println("WebSocket orqali ma'lumot yuborishda xato:", err)
 		conn.Close()
-		h.mu.Lock()
 		delete(h.clients, conn)
-		h.mu.Unlock()
 	}
 }
 
@@ -109,9 +105,7 @@ func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 		return
 	}
 
-	h.mu.Lock()
 	h.clients[conn] = true
-	h.mu.Unlock()
 
 	log.Println("Yangi mijoz ulandi")
 	h.sendUpdatedData(conn)
@@ -119,9 +113,7 @@ func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 	// Mijoz uzilganda o‘chirish
 	go func() {
 		defer func() {
-			h.mu.Lock()
 			delete(h.clients, conn)
-			h.mu.Unlock()
 			conn.Close()
 		}()
 		for {
@@ -135,8 +127,6 @@ func (h *Haftalik2Struct) WebSocketHandler(c *gin.Context) {
 
 // 📌 WebSocket orqali barcha mijozlarga yangilangan ma'lumotlarni yuborish
 func (h *Haftalik2Struct) BroadcastUpdate() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	data, err := h.getHaftalikData()
 	if err != nil {

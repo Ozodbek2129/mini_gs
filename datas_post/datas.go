@@ -5,14 +5,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
-
-var mu sync.Mutex
 
 type DatasStruct struct {
 	Key   string `json:"key"`
@@ -46,8 +43,6 @@ func writeJSONFile(data map[string]int64) error {
 }
 
 func DatasPost(c *gin.Context) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	var data DatasStruct
 
@@ -76,8 +71,6 @@ func DatasPost(c *gin.Context) {
 }
 
 func DatasRead(c *gin.Context) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	data, err := readJSONFile()
 	if err != nil {
@@ -124,9 +117,7 @@ func watchFileChanges() {
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				log.Println("datas.json fayli o'zgardi, mijozlarga yuborilmoqda")
 
-				mu.Lock()
 				updatedData, err := readJSONFile()
-				mu.Unlock()
 
 				if err == nil {
 					broadcastUpdate(updatedData)
@@ -147,9 +138,7 @@ func WebSocketHandler_datas(c *gin.Context) {
 		log.Println("WebSocket ulanishida xato:", err)
 		return
 	}
-	mu.Lock()
 	clients[conn] = true
-	mu.Unlock()
 
 	log.Println("Yangi mijoz ulandi, barcha ma'lumotlar yuborilmoqda")
 	data, err := readJSONFile()
@@ -159,9 +148,7 @@ func WebSocketHandler_datas(c *gin.Context) {
 
 	go func() {
 		defer func() {
-			mu.Lock()
 			delete(clients, conn)
-			mu.Unlock()
 			conn.Close()
 		}()
 		for {
@@ -174,8 +161,6 @@ func WebSocketHandler_datas(c *gin.Context) {
 }
 
 func broadcastUpdate(data map[string]int64) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	message, err := json.Marshal(data)
 	if err != nil {

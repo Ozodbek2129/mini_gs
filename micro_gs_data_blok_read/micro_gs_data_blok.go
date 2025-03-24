@@ -6,14 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 )
 
-var mu sync.Mutex
 var clients = make(map[*websocket.Conn]bool)
 var watcher *fsnotify.Watcher
 var lastSentData []byte
@@ -50,9 +48,7 @@ func watchFileChanges() {
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				log.Println("micro_gs.json fayli o'zgardi, mijozlarga yuborilmoqda")
 				
-				mu.Lock()
 				updatedData, err := loadData()
-				mu.Unlock()
 
 				if err == nil {
 					broadcastUpdate(updatedData)
@@ -68,8 +64,6 @@ func watchFileChanges() {
 }
 
 func MicroGsDataBlokRead(c *gin.Context) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	filename := "micro_gs.json"
 
@@ -160,9 +154,7 @@ func WebSocketHandler(c *gin.Context) {
 		log.Println("WebSocket ulanishida xato:", err)
 		return
 	}
-	mu.Lock()
 	clients[conn] = true
-	mu.Unlock()
 
 	log.Println("Yangi mijoz ulandi, barcha ma'lumotlar yuborilmoqda")
 	data, err := loadData()
@@ -172,9 +164,7 @@ func WebSocketHandler(c *gin.Context) {
 
 	go func() {
 		defer func() {
-			mu.Lock()
 			delete(clients, conn)
-			mu.Unlock()
 			conn.Close()
 		}()
 		for {
@@ -187,8 +177,6 @@ func WebSocketHandler(c *gin.Context) {
 }
 
 func broadcastUpdate(data MicroGsDataBlokReadStruct) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	message, err := json.Marshal(data)
 	if err != nil {
