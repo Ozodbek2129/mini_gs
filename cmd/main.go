@@ -2,7 +2,7 @@ package main
 
 import (
 	minigs12 "gs/1_2_minigs"
-	haftalik2 "gs/2haftalik"
+	// haftalik2 "gs/2haftalik"
 	"gs/baza"
 	"gs/booling"
 	corss "gs/cors"
@@ -28,16 +28,20 @@ func main() {
 	defer rdb.Close()
 
 	newfunc := baza.NewBazaStruct(db, rdb)
-	haftalik := haftalik2.NewHaftalik2Struct(db)
+	// haftalik := haftalik2.NewHaftalik2Struct(db)
 
 	go micro_gs_data_blok_read.StartFileWatcher()
 	go dataspost.StartFileWatcher_datas()
-	go haftalik.StartDatabaseListener()
+	// go haftalik.StartDatabaseListener()
 	go minigs12.StartFileWatcher_minigs12()
 
 	router.GET("/micro_gs_data_blok_read", micro_gs_data_blok_read.MicroGsDataBlokRead)
 	router.POST("/micro_gs_data_blok_post", micro_gs_data_blok_read.MicroGsDataBlokPost)
 	router.GET("/micro_gs_data_blok_ws", micro_gs_data_blok_read.WebSocketHandler)
+
+	router.POST("/micro_gs_data_blok_post1",micro_gs_data_blok_read.MicroGsDataBlokPost1)
+	router.GET("/micro_gs_data_blok_read1",micro_gs_data_blok_read.MicroGsDataBlokRead1)
+	router.GET("/micro_gs_data_blok_ws1",micro_gs_data_blok_read.WebSocketHandler1)
 
 	router.GET("/datas_get", dataspost.DatasRead)
 	router.POST("/datas_post", dataspost.DatasPost)
@@ -50,9 +54,9 @@ func main() {
 	router.POST("/delete", newfunc.Delete)
 	router.POST("/get-email", newfunc.GetEmail)
 
-	router.POST("/haftalik2post", haftalik.Haftalik2)
-	router.GET("/haftalik2ws", haftalik.WebSocketHandler)
-	router.GET("/haftalik2get", haftalik.Get2Haftalik)
+	// router.POST("/haftalik2post", haftalik.Haftalik2)
+	// router.GET("/haftalik2ws", haftalik.WebSocketHandler)
+	// router.GET("/haftalik2get", haftalik.Get2Haftalik)
 
 	router.POST("/booling_post", booling.BoolingPost)
 	router.GET("/booling_get", booling.BoolingRead)
