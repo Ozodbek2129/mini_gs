@@ -11,15 +11,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var filename = "booling.json"
+var fil_ename = "booling_python_error.json"
+var file__name = "booling_python_error.json"
 
-type BoolingStruct struct {
+type BoolingPythonStruct struct {
 	Key   string `json:"key"`
 	Value bool   `json:"value"`
 }
 
-func readJSONFile() (map[string]bool, error) {
-	file, err := ioutil.ReadFile(filename)
+func readJSONFile_python() (map[string]bool, error) {
+	file, err := ioutil.ReadFile(fil_ename)
 	if err != nil {
 		return nil, err
 	}
@@ -33,22 +34,22 @@ func readJSONFile() (map[string]bool, error) {
 	return data, nil
 }
 
-func writeJSONFile(data map[string]bool) error {
+func writeJSONFile_python(data map[string]bool) error {
 	fileData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, fileData, 0644)
+	return ioutil.WriteFile(fil_ename, fileData, 0644)
 }
 
-func BoolingPost(c *gin.Context) {
-	var booling BoolingStruct
+func BoolingPostPython(c *gin.Context) {
+	var booling BoolingPythonStruct
 	if err := c.ShouldBindJSON(&booling); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	booling1, err := readJSONFile()
+	booling1, err := readJSONFile_python()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
 		return
@@ -56,7 +57,7 @@ func BoolingPost(c *gin.Context) {
 
 	if _, exists := booling1[booling.Key]; exists {
 		booling1[booling.Key] = booling.Value
-		err = writeJSONFile(booling1)
+		err = writeJSONFile_python(booling1)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update JSON file"})
 			return
@@ -67,7 +68,7 @@ func BoolingPost(c *gin.Context) {
 	}
 }
 
-func BoolingRead(c *gin.Context) {
+func BoolingReadPython(c *gin.Context) {
 	data, err := readJSONFile()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
@@ -77,49 +78,64 @@ func BoolingRead(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-var clients = make(map[*websocket.Conn]bool)
-var watcher *fsnotify.Watcher
-var lastSentData []byte
+var clients1 = make(map[*websocket.Conn]bool)
+var watcher1 *fsnotify.Watcher
+var lastSentData11 []byte
 
-var upgrader_kamera = websocket.Upgrader{
+var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
-func StartFileWatcher_Python_kamera() {
+func StartFileWatcher_Python_Bool() {
 	var err error
-	watcher, err = fsnotify.NewWatcher()
+	watcher1, err = fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
 	}
 
 	// Faylni kuzatishga qo'shish
-	err = watcher.Add(filename)
+	err = watcher1.Add(file__name)
 	if err != nil {
 		log.Println("Faylni kuzatishga qo'shishda xato:", err)
 	}
 
-	go watchFileChanges_kamera()
+	go watchFileChanges()
 }
 
-func watchFileChanges_kamera() {
+func readJSONFile_Bool_Python() (map[string]bool, error) {
+	file, err := ioutil.ReadFile(file__name)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]bool
+	err = json.Unmarshal(file, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func watchFileChanges() {
 	for {
 		select {
-		case event, ok := <-watcher.Events:
+		case event, ok := <-watcher1.Events:
 			if !ok {
 				return
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Println("python_error.json fayli o'zgardi, mijozlarga yuborilmoqda")
+				log.Println("bool_python_error.json fayli o'zgardi, mijozlarga yuborilmoqda")
 
-				updatedData, err := readJSONFile()
+				updatedData, err := readJSONFile_Bool_Python()
 
 				if err == nil {
-					broadcastUpdate_kamera(updatedData)
+					broadcastUpdate(updatedData)
 				}
 			}
-		case err, ok := <-watcher.Errors:
+		case err, ok := <-watcher1.Errors:
 			if !ok {
 				return
 			}
@@ -128,23 +144,23 @@ func watchFileChanges_kamera() {
 	}
 }
 
-func WebSocketHandler_Python_kamera(c *gin.Context) {
-	conn, err := upgrader_kamera.Upgrade(c.Writer, c.Request, nil)
+func WebSocketHandler_Python_Bool(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("WebSocket ulanishida xato:", err)
 		return
 	}
-	clients[conn] = true
+	clients1[conn] = true
 
 	log.Println("Yangi mijoz ulandi, barcha ma'lumotlar yuborilmoqda")
-	data, err := readJSONFile()
+	data, err := readJSONFile_Bool_Python()
 	if err == nil {
 		conn.WriteJSON(data)
 	}
 
 	go func() {
 		defer func() {
-			delete(clients, conn)
+			delete(clients1, conn)
 			conn.Close()
 		}()
 		for {
@@ -156,24 +172,24 @@ func WebSocketHandler_Python_kamera(c *gin.Context) {
 	}()
 }
 
-func broadcastUpdate_kamera(data map[string]bool) {
+func broadcastUpdate(data map[string]bool) {
 
 	message, err := json.Marshal(data)
 	if err != nil {
 		return
 	}
 
-	if string(message) == string(lastSentData) {
+	if string(message) == string(lastSentData11) {
 		return // Agar ma'lumot oldingi yuborilgan ma'lumot bilan bir xil bo'lsa, yuborilmaydi
 	}
 
-	lastSentData = message // Yangi ma'lumotni saqlab qo'yamiz
+	lastSentData11 = message // Yangi ma'lumotni saqlab qo'yamiz
 
-	for client := range clients {
+	for client := range clients1 {
 		err := client.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
 			client.Close()
-			delete(clients, client)
+			delete(clients1, client)
 		}
 	}
 }

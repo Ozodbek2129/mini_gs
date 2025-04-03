@@ -12,15 +12,20 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var clients = make(map[*websocket.Conn]bool)
+var clients = make(map[*websocket.Conn]bool) // micro_gs.json uchun
+var clients1 = make(map[*websocket.Conn]bool) // micro_gs1.json uchun
 var watcher *fsnotify.Watcher
-var lastSentData []byte
+var lastSentData []byte  // micro_gs.json uchun
+var lastSentData1 []byte // micro_gs1.json uchun
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
+
+var fileName = "micro_gs.json"
+var fileName1 = "micro_gs1.json"
 
 func StartFileWatcher() {
 	var err error
@@ -29,29 +34,17 @@ func StartFileWatcher() {
 		panic(err)
 	}
 
-	// Faylni kuzatishga qo'shish
-	err = watcher.Add(file_name)
+	// Ikkala faylni kuzatishga qo'shish
+	err = watcher.Add(fileName)
 	if err != nil {
-		log.Println("Faylni kuzatishga qo'shishda xato:", err)
+		log.Println("Faylni kuzatishga qo'shishda xato (micro_gs.json):", err)
+	}
+	err = watcher.Add(fileName1)
+	if err != nil {
+		log.Println("Faylni kuzatishga qo'shishda xato (micro_gs1.json):", err)
 	}
 
 	go watchFileChanges()
-}
-
-func StartFileWatcher1() {
-	var err error
-	watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		panic(err)
-	}
-
-	// Faylni kuzatishga qo'shish
-	err = watcher.Add(filename)
-	if err != nil {
-		log.Println("Faylni kuzatishga qo'shishda xato:", err)
-	}
-
-	go watchFileChanges1()
 }
 
 func watchFileChanges() {
@@ -62,36 +55,22 @@ func watchFileChanges() {
 				return
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Println("micro_gs.json fayli o'zgardi, mijozlarga yuborilmoqda")
-				
-				updatedData, err := loadData()
-
-				if err == nil {
+				switch event.Name {
+				case fileName:
+					log.Println("micro_gs.json fayli o'zgardi, mijozlarga yuborilmoqda")
+					updatedData, err := loadData()
+					if err != nil {
+						log.Println("Ma'lumot yuklashda xato (micro_gs.json):", err)
+						continue
+					}
 					broadcastUpdate(updatedData)
-				}
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Println("Watcher xatosi:", err.Error())
-		}
-	}
-}
-
-func watchFileChanges1() {
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Println("micro_gs.json fayli o'zgardi, mijozlarga yuborilmoqda")
-				
-				updatedData, err := loadData1()
-
-				if err == nil {
+				case fileName1:
+					log.Println("micro_gs1.json fayli o'zgardi, mijozlarga yuborilmoqda")
+					updatedData, err := loadData1()
+					if err != nil {
+						log.Println("Ma'lumot yuklashda xato (micro_gs1.json):", err)
+						continue
+					}
 					broadcastUpdate1(updatedData)
 				}
 			}
@@ -106,9 +85,7 @@ func watchFileChanges1() {
 
 func MicroGsDataBlokRead(c *gin.Context) {
 
-	filename := "micro_gs.json"
-
-	file, err := os.Open(filename)
+	file, err := os.Open(fileName)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -133,16 +110,14 @@ func MicroGsDataBlokRead(c *gin.Context) {
 
 func MicroGsDataBlokRead1(c *gin.Context) {
 
-	filename := "micro_gs1.json"
-
-	file, err := os.Open(filename)
+	file, err := os.Open(fileName1)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	defer file.Close()
 
-	var data MicroGsDataBlokReadStruct
+	var data MicroGsDataBlokReadStruct1
 	bytevalue, err := io.ReadAll(file)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -158,29 +133,27 @@ func MicroGsDataBlokRead1(c *gin.Context) {
 	c.JSON(200, data)
 }
 
-var file_name = "micro_gs.json"
-var filename = "micro_gs1.json"
-
 type MicroGsDataBlokReadStruct map[string]map[string]interface{}
+type MicroGsDataBlokReadStruct1 map[string]map[string]interface{}
 
 func saveData(data MicroGsDataBlokReadStruct) error {
 	file, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file_name, file, 0644)
+	return os.WriteFile(fileName, file, 0644)
 }
 
-func saveData1(data MicroGsDataBlokReadStruct) error {
+func saveData1(data MicroGsDataBlokReadStruct1) error {
 	file, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, file, 0644)
+	return os.WriteFile(fileName1, file, 0644)
 }
 
 func loadData() (MicroGsDataBlokReadStruct, error) {
-	file, err := os.ReadFile(file_name)
+	file, err := os.ReadFile(fileName)
 	if err != nil {
 		return MicroGsDataBlokReadStruct{}, err
 	}
@@ -193,15 +166,15 @@ func loadData() (MicroGsDataBlokReadStruct, error) {
 	return data, nil
 }
 
-func loadData1() (MicroGsDataBlokReadStruct, error) {
-	file, err := os.ReadFile(filename)
+func loadData1() (MicroGsDataBlokReadStruct1, error) {
+	file, err := os.ReadFile(fileName1)
 	if err != nil {
-		return MicroGsDataBlokReadStruct{}, err
+		return MicroGsDataBlokReadStruct1{}, err
 	}
 
-	var data MicroGsDataBlokReadStruct
+	var data MicroGsDataBlokReadStruct1
 	if err := json.Unmarshal(file, &data); err != nil {
-		return MicroGsDataBlokReadStruct{}, err
+		return MicroGsDataBlokReadStruct1{}, err
 	}
 
 	return data, nil
@@ -279,10 +252,15 @@ func WebSocketHandler(c *gin.Context) {
 	}
 	clients[conn] = true
 
-	log.Println("Yangi mijoz ulandi, barcha ma'lumotlar yuborilmoqda")
+	log.Println("Yangi mijoz ulandi (micro_gs.json), barcha ma'lumotlar yuborilmoqda")
 	data, err := loadData()
 	if err == nil {
-		conn.WriteJSON(data)
+		err = conn.WriteJSON(data)
+		if err != nil {
+			log.Println("Mijozga dastlabki ma'lumot yuborishda xato (micro_gs.json):", err)
+		}
+	} else {
+		log.Println("Dastlabki ma'lumot yuklashda xato (micro_gs.json):", err)
 	}
 
 	go func() {
@@ -305,17 +283,22 @@ func WebSocketHandler1(c *gin.Context) {
 		log.Println("WebSocket ulanishida xato:", err)
 		return
 	}
-	clients[conn] = true
+	clients1[conn] = true
 
-	log.Println("Yangi mijoz ulandi, barcha ma'lumotlar yuborilmoqda")
+	log.Println("Yangi mijoz ulandi (micro_gs1.json), barcha ma'lumotlar yuborilmoqda")
 	data, err := loadData1()
 	if err == nil {
-		conn.WriteJSON(data)
+		err = conn.WriteJSON(data)
+		if err != nil {
+			log.Println("Mijozga dastlabki ma'lumot yuborishda xato (micro_gs1.json):", err)
+		}
+	} else {
+		log.Println("Dastlabki ma'lumot yuklashda xato (micro_gs1.json):", err)
 	}
 
 	go func() {
 		defer func() {
-			delete(clients, conn)
+			delete(clients1, conn)
 			conn.Close()
 		}()
 		for {
@@ -328,45 +311,49 @@ func WebSocketHandler1(c *gin.Context) {
 }
 
 func broadcastUpdate(data MicroGsDataBlokReadStruct) {
-
 	message, err := json.Marshal(data)
 	if err != nil {
+		log.Println("JSON marshal xatosi (micro_gs.json):", err)
 		return
 	}
 
 	if string(message) == string(lastSentData) {
-		return // Agar ma'lumot oldingi yuborilgan ma'lumot bilan bir xil bo'lsa, yuborilmaydi
+		log.Println("Ma'lumot o'zgarmagan (micro_gs.json), yuborilmaydi")
+		return
 	}
 
-	lastSentData = message // Yangi ma'lumotni saqlab qo'yamiz
+	lastSentData = message
 
 	for client := range clients {
 		err := client.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
+			log.Println("Mijozga yuborishda xato (micro_gs.json):", err)
 			client.Close()
 			delete(clients, client)
 		}
 	}
 }
 
-func broadcastUpdate1(data MicroGsDataBlokReadStruct) {
-
+func broadcastUpdate1(data MicroGsDataBlokReadStruct1) {
 	message, err := json.Marshal(data)
 	if err != nil {
+		log.Println("JSON marshal xatosi (micro_gs1.json):", err)
 		return
 	}
 
-	if string(message) == string(lastSentData) {
-		return // Agar ma'lumot oldingi yuborilgan ma'lumot bilan bir xil bo'lsa, yuborilmaydi
+	if string(message) == string(lastSentData1) {
+		log.Println("Ma'lumot o'zgarmagan (micro_gs1.json), yuborilmaydi")
+		return
 	}
 
-	lastSentData = message // Yangi ma'lumotni saqlab qo'yamiz
+	lastSentData1 = message
 
-	for client := range clients {
+	for client := range clients1 {
 		err := client.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
+			log.Println("Mijozga yuborishda xato (micro_gs1.json):", err)
 			client.Close()
-			delete(clients, client)
+			delete(clients1, client)
 		}
 	}
 }

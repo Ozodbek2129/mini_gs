@@ -1,4 +1,4 @@
-package booling
+package python_error
 
 import (
 	"encoding/json"
@@ -6,25 +6,20 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/fsnotify/fsnotify"
 )
 
-var filename = "booling.json"
+var filename = "python_error.json"
 
-type BoolingStruct struct {
-	Key   string `json:"key"`
-	Value bool   `json:"value"`
-}
-
-func readJSONFile() (map[string]bool, error) {
+func readJSONFile() (map[string]int64, error) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	var data map[string]bool
+	var data map[string]int64
 	err = json.Unmarshal(file, &data)
 	if err != nil {
 		return nil, err
@@ -33,7 +28,7 @@ func readJSONFile() (map[string]bool, error) {
 	return data, nil
 }
 
-func writeJSONFile(data map[string]bool) error {
+func writeJSONFile(data map[string]int64) error {
 	fileData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
@@ -41,22 +36,26 @@ func writeJSONFile(data map[string]bool) error {
 	return ioutil.WriteFile(filename, fileData, 0644)
 }
 
-func BoolingPost(c *gin.Context) {
-	var booling BoolingStruct
-	if err := c.ShouldBindJSON(&booling); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func Python_error(c *gin.Context) {
+	var request struct {
+		Key   string `json:"key"`
+		Value int    `json:"value"`
 	}
 
-	booling1, err := readJSONFile()
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return	
+	}
+
+	data, err := readJSONFile()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
+		c.JSON(500, gin.H{"error": "Failed to read JSON file"})
 		return
 	}
 
-	if _, exists := booling1[booling.Key]; exists {
-		booling1[booling.Key] = booling.Value
-		err = writeJSONFile(booling1)
+	if _, exists := data[request.Key]; exists {
+		data[request.Key] = int64(request.Value)
+		err = writeJSONFile(data)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update JSON file"})
 			return
@@ -67,13 +66,12 @@ func BoolingPost(c *gin.Context) {
 	}
 }
 
-func BoolingRead(c *gin.Context) {
+func Python_error_read(c *gin.Context) {
 	data, err := readJSONFile()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
+		c.JSON(500, gin.H{"error": "Failed to read JSON file"})
 		return
 	}
-
 	c.JSON(http.StatusOK, data)
 }
 
@@ -81,13 +79,13 @@ var clients = make(map[*websocket.Conn]bool)
 var watcher *fsnotify.Watcher
 var lastSentData []byte
 
-var upgrader_kamera = websocket.Upgrader{
+var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
-func StartFileWatcher_Python_kamera() {
+func StartFileWatcher_Python() {
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
@@ -100,10 +98,10 @@ func StartFileWatcher_Python_kamera() {
 		log.Println("Faylni kuzatishga qo'shishda xato:", err)
 	}
 
-	go watchFileChanges_kamera()
+	go watchFileChanges()
 }
 
-func watchFileChanges_kamera() {
+func watchFileChanges() {
 	for {
 		select {
 		case event, ok := <-watcher.Events:
@@ -116,7 +114,7 @@ func watchFileChanges_kamera() {
 				updatedData, err := readJSONFile()
 
 				if err == nil {
-					broadcastUpdate_kamera(updatedData)
+					broadcastUpdate(updatedData)
 				}
 			}
 		case err, ok := <-watcher.Errors:
@@ -128,8 +126,8 @@ func watchFileChanges_kamera() {
 	}
 }
 
-func WebSocketHandler_Python_kamera(c *gin.Context) {
-	conn, err := upgrader_kamera.Upgrade(c.Writer, c.Request, nil)
+func WebSocketHandler_Python(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("WebSocket ulanishida xato:", err)
 		return
@@ -156,7 +154,7 @@ func WebSocketHandler_Python_kamera(c *gin.Context) {
 	}()
 }
 
-func broadcastUpdate_kamera(data map[string]bool) {
+func broadcastUpdate(data map[string]int64) {
 
 	message, err := json.Marshal(data)
 	if err != nil {

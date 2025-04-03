@@ -1,10 +1,11 @@
 {
   "datas": {
+    "avariya_chastotnik": 0,
     "charxpalak_down": 0,
     "charxpalak_down_konsevik": 0,
     "charxpalak_up": 0,
     "charxpalak_up_konsevik": 0,
-    "Авария": 0,
+    "Авария": 1,
     "автомат_выкл_akumlator": 0,
     "автомат_выкл_chastotnik_1": 0,
     "автомат_выкл_chastotnik_2": 0,
@@ -20,7 +21,7 @@
     "прожектор": 0,
     "работа": 0,
     "сигнализация": 0,
-    "уревон_воды": 0
+    "уревон_воды": 8
   },
   "namlik_temp": {
     "ichki_real_namlik": 0,

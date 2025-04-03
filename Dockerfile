@@ -23,6 +23,8 @@ COPY --from=builder /app/micro_gs.json  ./micro_gs.json
 COPY --from=builder /app/micro_gs1.json  ./micro_gs1.json 
 COPY --from=builder /app/minigs12.json  ./minigs12.json 
 COPY --from=builder /app/booling.json  ./booling.json 
+COPY --from=builder /app/booling_python_error.json  ./booling_python_error.json 
+COPY --from=builder /app/python_error.json  ./python_error.json 
 COPY --from=builder /app/email/template.html ./email/
 COPY --from=builder /app/.env .
 
