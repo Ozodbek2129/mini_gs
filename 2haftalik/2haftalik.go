@@ -187,9 +187,9 @@ package haftalik2
 // 	log.Println("Bugungi sana:", today)
 // 	log.Println("14 kun oldingi sana:", twoWeeksAgo)
 
-// 	query := `SELECT date, day, quantity 
-// 	          FROM haftalik2 
-// 	          WHERE deleted_at IS NULL 
+// 	query := `SELECT date, day, quantity
+// 	          FROM haftalik2
+// 	          WHERE deleted_at IS NULL
 // 	          AND date BETWEEN $1 AND $2
 // 	          ORDER BY date ASC`
 
@@ -225,9 +225,9 @@ package haftalik2
 // 	log.Println("Bugungi sana:", today)
 // 	log.Println("14 kun oldingi sana:", twoWeeksAgo)
 
-// 	query := `SELECT date, day, quantity 
-// 	          FROM haftalik2 
-// 	          WHERE deleted_at IS NULL 
+// 	query := `SELECT date, day, quantity
+// 	          FROM haftalik2
+// 	          WHERE deleted_at IS NULL
 // 	          AND date BETWEEN $1 AND $2
 // 	          ORDER BY date ASC`
 

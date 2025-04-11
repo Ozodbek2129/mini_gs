@@ -11,8 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var fil_ename = "booling_python_error.json"
-var file__name = "booling_python_error.json"
+var file_name = "booling_python_error.json"
 
 type BoolingPythonStruct struct {
 	Key   string `json:"key"`
@@ -20,7 +19,7 @@ type BoolingPythonStruct struct {
 }
 
 func readJSONFile_python() (map[string]bool, error) {
-	file, err := ioutil.ReadFile(fil_ename)
+	file, err := ioutil.ReadFile(file_name)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +38,7 @@ func writeJSONFile_python(data map[string]bool) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(fil_ename, fileData, 0644)
+	return ioutil.WriteFile(file_name, fileData, 0644)
 }
 
 func BoolingPostPython(c *gin.Context) {
@@ -69,7 +68,7 @@ func BoolingPostPython(c *gin.Context) {
 }
 
 func BoolingReadPython(c *gin.Context) {
-	data, err := readJSONFile()
+	data, err := readJSONFile_python()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
 		return
@@ -96,7 +95,7 @@ func StartFileWatcher_Python_Bool() {
 	}
 
 	// Faylni kuzatishga qo'shish
-	err = watcher1.Add(file__name)
+	err = watcher1.Add(file_name)
 	if err != nil {
 		log.Println("Faylni kuzatishga qo'shishda xato:", err)
 	}
@@ -105,7 +104,7 @@ func StartFileWatcher_Python_Bool() {
 }
 
 func readJSONFile_Bool_Python() (map[string]bool, error) {
-	file, err := ioutil.ReadFile(file__name)
+	file, err := ioutil.ReadFile(file_name)
 	if err != nil {
 		return nil, err
 	}

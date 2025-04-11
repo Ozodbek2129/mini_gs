@@ -1,4 +1,4 @@
-package booling
+package booling_kamera
 
 import (
 	"encoding/json"

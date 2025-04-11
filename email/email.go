@@ -29,13 +29,13 @@ func Email(email string) (string, error) {
 
 func SendCode(email string, code string) error {
 	from := "articanconnection@gmail.com"
-	password := "kouj rpbf kvmm rdzq" 
+	password := "kouj rpbf kvmm rdzq"
 
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "465"
 
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, 
+		InsecureSkipVerify: true,
 	}
 
 	conn, err := tls.Dial("tcp", smtpHost+":"+smtpPort, tlsConfig)

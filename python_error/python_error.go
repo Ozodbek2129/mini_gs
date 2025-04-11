@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/fsnotify/fsnotify"
 )
 
 var filename = "python_error.json"
@@ -44,7 +44,7 @@ func Python_error(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
-		return	
+		return
 	}
 
 	data, err := readJSONFile()

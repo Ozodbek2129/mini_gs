@@ -9,14 +9,14 @@ import (
 )
 
 type Config struct {
-	DB_USER         string
-	DB_PASSWORD     string
-	DB_NAME         string
-	DB_HOST         string
-	DB_PORT         int
-	RD_HOST      string
-	RD_PASSWORD  string
-	RD_NAME      int
+	DB_USER     string
+	DB_PASSWORD string
+	DB_NAME     string
+	DB_HOST     string
+	DB_PORT     int
+	RD_HOST     string
+	RD_PASSWORD string
+	RD_NAME     int
 }
 
 func Load() Config {

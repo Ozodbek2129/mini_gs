@@ -19,10 +19,12 @@ import (
 type RegisterRepo struct {
 	Id    string `json:"id"`
 	Email string `json:"email"`
+	Full_name string `json:"full_name"`
+	Image string `json:"image"`
 }
 
 type BazaStruct struct {
-	db *sql.DB
+	db  *sql.DB
 	rdb *redis.Client
 }
 
@@ -135,9 +137,11 @@ func (b *BazaStruct) ConfirmationRegister(c *gin.Context) {
 
 	if existingId != "" {
 		if deletedAt.Valid {
-			queryUpdate := `UPDATE gs SET email = $1 update_at = $2, deleted_at = NULL WHERE email = $3`
+			queryUpdate := `UPDATE gs SET email = $1, image = $2, full_name = $3, update_at = $4, deleted_at = NULL WHERE email = $5`
 			_, err = b.db.Exec(queryUpdate,
 				registerData.Email,
+				registerData.Image,
+				registerData.Full_name,
 				newTime,
 				registerData.Email,
 			)
@@ -152,14 +156,16 @@ func (b *BazaStruct) ConfirmationRegister(c *gin.Context) {
 		}
 	} else {
 		queryInsert := `INSERT INTO gs (
-                                    id, email, created_at, update_at
+                                    id, email, image, full_name, created_at, update_at
                                 ) VALUES (
-                                    $1, $2, $3, $4
+                                    $1, $2, $3, $4, $5, $6
                                 )`
 
 		_, err = b.db.Exec(queryInsert,
 			registerData.Id,
 			registerData.Email,
+			registerData.Image,
+			registerData.Full_name,
 			newTime,
 			newTime,
 		)
@@ -267,23 +273,29 @@ type LoginRepo struct {
 func (b *BazaStruct) Login(c *gin.Context) {
 	email := c.Query("email")
 
-	if email == ""  {
+	if email == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email va parol talab qilinadi"})
 		return
 	}
 
 	fmt.Println(email)
 
-	query := `select id, email from gs where email = $1 and deleted_at is null`
+	query := `select id, email, image, full_name, active from gs where email = $1 and deleted_at is null`
 
 	var result struct {
 		Id    string `json:"id"`
 		Email string `json:"email"`
+		Full_name string `json:"full_name"`
+		Active bool   `json:"active"`
+		Image string `json:"image"`
 	}
 
 	err := b.db.QueryRow(query, email).Scan(
 		&result.Id,
 		&result.Email,
+		&result.Full_name,
+		&result.Active,
+		&result.Image,
 	)
 
 	if err != nil {
@@ -344,19 +356,23 @@ func (b *BazaStruct) GetEmail(c *gin.Context) {
 	}
 	fmt.Println(data)
 
-	query := `select id, email from gs where email = $1 and deleted_at is null`
+	query := `select id, email, image, full_name from gs where email = $1 and deleted_at is null`
 
 	var result struct {
-		Id          string `json:"id"`
-		Email       string `json:"email"`
-		Created_at  string `json:"created_at"`
-		Update_at   string `json:"update_at"`
-		Deleted_at  string `json:"deleted_at"`
+		Id         string `json:"id"`
+		Email      string `json:"email"`
+		Image      string `json:"image"`
+		Full_name  string `json:"full_name"`
+		Created_at string `json:"created_at"`
+		Update_at  string `json:"update_at"`
+		Deleted_at string `json:"deleted_at"`
 	}
 
 	err := b.db.QueryRow(query, data.Email).Scan(
 		&result.Id,
 		&result.Email,
+		&result.Image,
+		&result.Full_name,
 	)
 
 	if err != nil {
@@ -370,4 +386,63 @@ func (b *BazaStruct) GetEmail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+type ActiveRepo struct {
+	Id string `json:"id"`
+	Activ bool `json:"active"`
+}
+
+func (b *BazaStruct) Active(c *gin.Context) {
+	query_update := `update gs set active = $1 where id = $2 and deleted_at is null`
+	var data ActiveRepo
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "selection email error"})
+		return
+	}
+	_, err := b.db.Exec(query_update, data.Activ, data.Id)
+	if err != nil {
+		fmt.Println("err", err)
+		c.JSON(400, gin.H{"Error deleting ": err})
+		return
+	}
+	c.JSON(200, gin.H{"message": "successful"})
+}
+
+type User struct {
+    ID       string
+    Email    string
+    Image    string
+    FullName string
+    Active   bool
+}
+
+func (b *BazaStruct) GetAll(c *gin.Context) {
+	query := `
+        SELECT id, email, image, full_name, active
+        FROM gs
+        WHERE deleted_at IS NULL
+    `
+
+	rows, err := b.db.Query(query)
+    if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var users []User
+    for rows.Next() {
+        var user User
+        err := rows.Scan(&user.ID, &user.Email, &user.Image, &user.FullName, &user.Active)
+        if err != nil {
+			log.Fatal(err)
+		}
+		users = append(users, user)
+    }
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": users})
 }
