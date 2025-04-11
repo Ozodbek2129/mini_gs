@@ -13,16 +13,17 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// @Summary Upload Photo
-// @Description Api for upload a new photo
-// @Tags auth_media
+// UploadMedia godoc
+// @Summary Faylni yuklash
+// @Description Bu endpoint foydalanuvchiga rasm (.jpg, .jpeg, .png) yoki video (.mp4) fayllarni yuklash imkonini beradi. Fayl MinIO serveriga saqlanadi va URL qaytariladi.
+// @Tags Media
 // @Accept multipart/form-data
-// @Param        email  path      string  true  "User Email"
-// @Param file formData file true "createUserModel"
-// @Success 200 {object} string
-// @Failure 400 {object} string
-// @Failure 500 {object} string
-// @Router /auth/products/media/{email} [post]
+// @Produce json
+// @Param file formData file true "Yuklanadigan fayl (faqat .jpg, .jpeg, .png yoki .mp4 formatlari qabul qilinadi)"
+// @Success 200 {object} map[string]string "Fayl muvaffaqiyatli yuklandi" Example({"file_url": "http://minio:9000/images/abc123.jpg"})
+// @Failure 400 {object} map[string]string "Noto'g'ri so'rov yoki fayl turi" Example({"error": "Yaroqsiz fayl turi"})
+// @Failure 500 {object} map[string]string "Server xatosi" Example({"error": "MinIO bilan bog'lanishda xatolik: ..."})
+// @Router /upload_image [post]
 func UploadMedia(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
