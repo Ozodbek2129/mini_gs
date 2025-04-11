@@ -16,6 +16,8 @@ import (
 	"gs/micro_gs_data_blok_read"
 
 	"github.com/gin-gonic/gin"
+
+	_ "gs/docs"
 )
 
 // @title        Google_docs_user API
