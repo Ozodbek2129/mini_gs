@@ -17,7 +17,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	_ "gs/docs"
+	_ "gs/cmd/docs"
 )
 
 // @title        Google_docs_user API
