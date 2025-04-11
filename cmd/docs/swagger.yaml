@@ -8,36 +8,44 @@ info:
   title: Google_docs_user API
   version: "1.0"
 paths:
-  /auth/products/media/{email}:
+  /upload_image:
     post:
       consumes:
       - multipart/form-data
-      description: Api for upload a new photo
+      description: Bu endpoint foydalanuvchiga rasm (.jpg, .jpeg, .png) yoki video
+        (.mp4) fayllarni yuklash imkonini beradi. Fayl MinIO serveriga saqlanadi va
+        URL qaytariladi.
       parameters:
-      - description: User Email
-        in: path
-        name: email
-        required: true
-        type: string
-      - description: createUserModel
+      - description: Yuklanadigan fayl (faqat .jpg, .jpeg, .png yoki .mp4 formatlari
+          qabul qilinadi)
         in: formData
         name: file
         required: true
         type: file
+      produces:
+      - application/json
       responses:
         "200":
-          description: OK
+          description: 'Fayl muvaffaqiyatli yuklandi" Example({"file_url": "http://minio:9000/images/abc123.jpg"})'
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "400":
-          description: Bad Request
+          description: 'Noto''g''ri so''rov yoki fayl turi" Example({"error": "Yaroqsiz
+            fayl turi"})'
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "500":
-          description: Internal Server Error
+          description: 'Server xatosi" Example({"error": "MinIO bilan bog''lanishda
+            xatolik: ..."})'
           schema:
-            type: string
-      summary: Upload Photo
+            additionalProperties:
+              type: string
+            type: object
+      summary: Faylni yuklash
       tags:
-      - auth_media
+      - Media
 swagger: "2.0"
