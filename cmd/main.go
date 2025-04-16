@@ -4,16 +4,18 @@ import (
 	minigs12 "gs/1_2_minigs"
 	"gs/add_image"
 	booling "gs/booling/bollling_kamera"
+	"gs/monitoring"
 	"gs/python_error"
 
 	// haftalik2 "gs/2haftalik"
 	"gs/baza"
 	booling_kamera "gs/booling"
 	corss "gs/cors"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	dataspost "gs/datas_post"
 	"gs/micro_gs_data_blok_read"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/gin-gonic/gin"
 
@@ -45,6 +47,7 @@ func main() {
 
 	newfunc := baza.NewBazaStruct(db, rdb)
 	// haftalik := haftalik2.NewHaftalik2Struct(db)
+	monitor := monitoring.NewBazaStructMonitor(db)
 
 	go micro_gs_data_blok_read.StartWatcherMicroGs()
 	go micro_gs_data_blok_read.StartWatcherMicroGs1()
@@ -54,6 +57,7 @@ func main() {
 	go python_error.StartFileWatcher_Python()
 	go booling.StartFileWatcher_Python_Bool()
 	go booling_kamera.StartFileWatcher_Python_kamera()
+	go newfunc.WatchDatabase()
 
 	router.GET("/micro_gs_data_blok_read", micro_gs_data_blok_read.MicroGsDataBlokRead)
 	router.POST("/micro_gs_data_blok_post", micro_gs_data_blok_read.MicroGsDataBlokPost)
@@ -74,9 +78,12 @@ func main() {
 	router.DELETE("/delete", newfunc.Delete)
 	router.POST("/get-email", newfunc.GetEmail)
 	router.PUT("/active",newfunc.Active)
-	router.POST("/getall", newfunc.GetAll)
+	router.GET("/getall", newfunc.GetAll)
+	router.GET("/getall_ws",newfunc.HandleWebSocket)
 
 	router.POST("/upload_image", add_image.UploadMedia)
+	router.POST("/post_monitor_download", monitor.HandleExportMonitoring)
+	router.POST("/post_monitor", monitor.CreateMonitoring)
 
 	// router.POST("/haftalik2post", haftalik.Haftalik2)
 	// router.GET("/haftalik2ws", haftalik.WebSocketHandler)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"gs/config"
 	"gs/email"
 	"log"
 	"net/http"
@@ -13,14 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
 type RegisterRepo struct {
-	Id    string `json:"id"`
-	Email string `json:"email"`
+	Id        string `json:"id"`
+	Email     string `json:"email"`
 	Full_name string `json:"full_name"`
-	Image string `json:"image"`
+	Image     string `json:"image"`
 }
 
 type BazaStruct struct {
@@ -124,7 +127,6 @@ func (b *BazaStruct) ConfirmationRegister(c *gin.Context) {
 
 	newTime := time.Now()
 
-	// Check if user already exists in the database
 	var existingId string
 	var deletedAt sql.NullTime
 	queryCheck := `SELECT id, deleted_at FROM gs WHERE email = $1`
@@ -161,6 +163,10 @@ func (b *BazaStruct) ConfirmationRegister(c *gin.Context) {
                                     $1, $2, $3, $4, $5, $6
                                 )`
 
+		if registerData.Image == "" {
+			registerData.Image = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+		}
+
 		_, err = b.db.Exec(queryInsert,
 			registerData.Id,
 			registerData.Email,
@@ -177,7 +183,6 @@ func (b *BazaStruct) ConfirmationRegister(c *gin.Context) {
 		}
 	}
 
-	// Remove Redis key
 	err = b.rdb.Del(ctx, approvedKey).Err()
 	if err != nil {
 		log.Printf("Error deleting Redis data: %v", err)
@@ -202,9 +207,7 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 
 	ctx := context.Background()
 
-	// Agar tasdiqlash false bo‘lsa
 	if !approval.Approve {
-		// Redis'dan ma'lumotni o‘chirish
 		_, err := b.rdb.Get(ctx, approval.Email).Result()
 		if err == redis.Nil {
 			c.JSON(400, gin.H{"error": "No registration data found for this email"})
@@ -215,7 +218,6 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 			return
 		}
 
-		// Redis'dan o‘chirish
 		err = b.rdb.Del(ctx, approval.Email).Err()
 		if err != nil {
 			log.Printf("Error deleting data from Redis: %v", err)
@@ -227,7 +229,6 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 		return
 	}
 
-	// Agar tasdiqlash true bo‘lsa
 	dataJson, err := b.rdb.Get(ctx, approval.Email).Result()
 	if err == redis.Nil {
 		c.JSON(400, gin.H{"error": "No registration data found for this email"})
@@ -238,7 +239,6 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 		return
 	}
 
-	// Redis ma'lumotni JSON ga parse qilish
 	var registerData RegisterRepo
 	err = json.Unmarshal([]byte(dataJson), &registerData)
 	if err != nil {
@@ -247,7 +247,6 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 		return
 	}
 
-	// Tasdiqlangan ma'lumotlarni Redis'ga vaqtinchalik saqlash
 	err = b.rdb.SetEX(ctx, approval.Email, dataJson, 10*time.Minute).Err()
 	if err != nil {
 		log.Printf("Error saving approved data to Redis: %v", err)
@@ -255,7 +254,6 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 		return
 	}
 
-	// Email jo‘natish
 	err = email.SendCode(registerData.Email, registerData.Id)
 	if err != nil {
 		log.Printf("Error sending email: %v", err)
@@ -283,19 +281,19 @@ func (b *BazaStruct) Login(c *gin.Context) {
 	query := `select id, email, image, full_name, active from gs where email = $1 and deleted_at is null`
 
 	var result struct {
-		Id    string `json:"id"`
-		Email string `json:"email"`
+		Id        string `json:"id"`
+		Email     string `json:"email"`
 		Full_name string `json:"full_name"`
-		Active bool   `json:"active"`
-		Image string `json:"image"`
+		Active    bool   `json:"active"`
+		Image     string `json:"image"`
 	}
 
 	err := b.db.QueryRow(query, email).Scan(
 		&result.Id,
 		&result.Email,
+		&result.Image,
 		&result.Full_name,
 		&result.Active,
-		&result.Image,
 	)
 
 	if err != nil {
@@ -389,8 +387,8 @@ func (b *BazaStruct) GetEmail(c *gin.Context) {
 }
 
 type ActiveRepo struct {
-	Id string `json:"id"`
-	Activ bool `json:"active"`
+	Id    string `json:"id"`
+	Activ bool   `json:"active"`
 }
 
 func (b *BazaStruct) Active(c *gin.Context) {
@@ -409,40 +407,159 @@ func (b *BazaStruct) Active(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "successful"})
 }
 
+var clients = make(map[*websocket.Conn]bool)
+
 type User struct {
-    ID       string
-    Email    string
-    Image    string
-    FullName string
-    Active   bool
+	ID       string
+	Email    string
+	Image    string
+	FullName string
+	Active   bool
 }
 
-func (b *BazaStruct) GetAll(c *gin.Context) {
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+func (b *BazaStruct) HandleWebSocket(c *gin.Context) {
+	if b == nil || clients == nil {
+		log.Println("BazaStruct yoki clients map nil")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server xatosi"})
+		return
+	}
+
+	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Println("WebSocket yangilash xatosi:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "WebSocket ulanish xatosi"})
+		return
+	}
+
+	clients[ws] = true
+	log.Println("Yangi WebSocket mijoz ulandi, jami mijozlar:", len(clients))
+
+	users, err := b.getAllUsers()
+	if err != nil {
+		log.Println("Dastlabki foydalanuvchilarni olish xatosi:", err)
+		delete(clients, ws)
+		ws.Close()
+		return
+	}
+	if err := ws.WriteJSON(users); err != nil {
+		log.Println("Dastlabki ma'lumotlarni yuborish xatosi:", err)
+		delete(clients, ws)
+		ws.Close()
+		return
+	}
+
+	for {
+		if _, _, err := ws.NextReader(); err != nil {
+			delete(clients, ws)
+			log.Println("WebSocket mijoz uzildi, jami mijozlar:", len(clients))
+			ws.Close()
+			break
+		}
+	}
+}
+
+func (b *BazaStruct) getAllUsers() ([]User, error) {
 	query := `
         SELECT id, email, image, full_name, active
         FROM gs
         WHERE deleted_at IS NULL
+        ORDER BY id
     `
 
 	rows, err := b.db.Query(query)
-    if err != nil {
-		log.Fatal(err)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
 	var users []User
-    for rows.Next() {
-        var user User
-        err := rows.Scan(&user.ID, &user.Email, &user.Image, &user.FullName, &user.Active)
-        if err != nil {
-			log.Fatal(err)
+	for rows.Next() {
+		var user User
+		err := rows.Scan(&user.ID, &user.Email, &user.Image, &user.FullName, &user.Active)
+		if err != nil {
+			return nil, err
 		}
 		users = append(users, user)
-    }
-
-	if err := rows.Err(); err != nil {
-		log.Fatal(err)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (b *BazaStruct) NotifyClients(users []User) {
+
+	log.Println("Mijozlarga yangilanish yuborilmoqda, jami mijozlar:", len(clients))
+	for client := range clients {
+		err := client.WriteJSON(users)
+		if err != nil {
+			log.Println("Mijozga yangilanish yuborish xatosi:", err)
+			client.Close()
+			delete(clients, client)
+		} else {
+			log.Println("Mijozga ma'lumot muvaffaqiyatli yuborildi")
+		}
+	}
+}
+
+func (b *BazaStruct) WatchDatabase() {
+	cfg := config.Load()
+
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		cfg.DB_USER, cfg.DB_PASSWORD, cfg.DB_HOST, cfg.DB_PORT, cfg.DB_NAME)
+
+	listener := pq.NewListener(connStr, 10*time.Second, time.Minute, func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Println("Listener xatosi:", err)
+		} else {
+			log.Println("Listener holati:", ev)
+		}
+	})
+
+	err := listener.Listen("user_changes")
+	if err != nil {
+		log.Fatal("Kanalni tinglash xatosi:", err)
+	}
+	log.Println("user_changes kanalini tinglash boshlandi")
+
+	for {
+		select {
+		case notification := <-listener.Notify:
+			if notification != nil {
+				log.Println("O'zgarish aniqlandi:", notification.Extra)
+				users, err := b.getAllUsers()
+				if err != nil {
+					log.Println("Yangilangan foydalanuvchilarni olish xatosi:", err)
+					continue
+				}
+				b.NotifyClients(users)
+			}
+		case <-time.After(60 * time.Second):
+			if err := listener.Ping(); err != nil {
+				log.Println("Listener ping xatosi:", err)
+			} else {
+				log.Println("Listener ping muvaffaqiyatli")
+			}
+		}
+	}
+}
+
+func (b *BazaStruct) GetAll(c *gin.Context) {
+	users, err := b.getAllUsers()
+	if err != nil {
+		log.Println("Error fetching users:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }

@@ -33,10 +33,13 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// Fayl kengaytmasini olish
 	fileExt := filepath.Ext(file.Filename)
 
+	// Yangi fayl nomi generatsiya qilish (UUID + kengaytma)
 	newFile := uuid.NewString() + fileExt
 
+	// Lokal katalog yaratish
 	mediaDir := "./media"
 	err = os.MkdirAll(mediaDir, os.ModePerm)
 	if err != nil {
@@ -46,6 +49,7 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// Faylni lokal katalogga saqlash
 	filePath := filepath.Join(mediaDir, newFile)
 	err = c.SaveUploadedFile(file, filePath)
 	if err != nil {
@@ -55,6 +59,7 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// MinIO klientini sozlash
 	minioClient, err := minio.New("minio:9000", &minio.Options{
 		Creds:  credentials.NewStaticV4("minio", "minioadmin", ""),
 		Secure: false,
@@ -66,6 +71,7 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// Bucket nomi va Content-Type ni aniqlash
 	var bucketName string
 	contentType := "application/octet-stream"
 
@@ -87,6 +93,7 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// Bucket mavjudligini tekshirish
 	exists, err := minioClient.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -95,6 +102,7 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
+	// Bucketni yaratish (agar mavjud bo'lmasa)
 	if !exists {
 		err = minioClient.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
 		if err != nil {
@@ -105,6 +113,28 @@ func UploadMedia(c *gin.Context) {
 		}
 	}
 
+	// Ommaviy kirish siyosatini o'rnatish
+	policy := `{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": "*",
+				"Action": ["s3:GetObject"],
+				"Resource": "arn:aws:s3:::%s/*"
+			}
+		]
+	}`
+	policy = fmt.Sprintf(policy, bucketName)
+	err = minioClient.SetBucketPolicy(context.Background(), bucketName, policy)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Bucket siyosatini o'rnatishda xatolik: " + err.Error(),
+		})
+		return
+	}
+
+	// Faylni MinIO'ga yuklash
 	_, err = minioClient.FPutObject(context.Background(), bucketName, newFile, filePath, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
@@ -115,8 +145,22 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
-	objUrl := fmt.Sprintf("http://minio:9000/%s/%s", bucketName, newFile)
+	// Tashqi manzilni aniqlash (muhit o'zgaruvchisidan olish)
+	minioHost := os.Getenv("MINIO_HOST")
+	if minioHost == "" {
+		minioHost = "192.168.0.44:9000" // Default qiymat
+	}
+	objUrl := fmt.Sprintf("http://%s/%s/%s", minioHost, bucketName, newFile)
+
+	// Muvaffaqiyatli javob qaytarish
 	c.JSON(http.StatusOK, gin.H{
 		"file_url": objUrl,
 	})
+
+	// Lokal faylni o'chirish (ixtiyoriy, agar kerak bo'lmasa)
+	err = os.Remove(filePath)
+	if err != nil {
+		// Faqat log qilish, javobga ta'sir qilmaydi
+		fmt.Printf("Lokal faylni o'chirishda xatolik: %v\n", err)
+	}
 }
