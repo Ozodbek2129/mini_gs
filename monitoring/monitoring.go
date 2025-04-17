@@ -23,6 +23,7 @@ type Monitoring struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+
 // BazaStruct
 type BazaStruct struct {
 	db *sql.DB
