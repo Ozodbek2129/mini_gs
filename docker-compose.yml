@@ -81,7 +81,7 @@ services:
       - MINIO_ROOT_PASSWORD=minioadmin
       - MINIO_DEFAULT_BUCKETS=photos
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://54.93.213.231:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 5
