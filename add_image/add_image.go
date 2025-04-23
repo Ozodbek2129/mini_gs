@@ -148,7 +148,7 @@ func UploadMedia(c *gin.Context) {
 	// Tashqi manzilni aniqlash (muhit o'zgaruvchisidan olish)
 	minioHost := os.Getenv("MINIO_HOST")
 	if minioHost == "" {
-		minioHost = "54.93.213.231:9000" // Default qiymat
+		minioHost = "0.0.0.0:9000" // Default qiymat
 	}
 	objUrl := fmt.Sprintf("http://%s/%s/%s", minioHost, bucketName, newFile)
 
