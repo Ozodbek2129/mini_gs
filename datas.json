@@ -12,5 +12,7 @@
   "projektor_on_off": 0,
   "projektor_on_off2": 0,
   "restart_pc": 0,
-  "restart_pc2": 0
+  "restart_pc2": 0,
+  "alarm_knopka": 0,
+  "Alarm_voice": 0
 }

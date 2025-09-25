@@ -88,7 +88,7 @@ func (b *BazaStruct) Register(c *gin.Context) {
 }
 
 type Confirmation struct {
-	Id    string `json:"id"`
+	Id    string `json:"id"`	
 	Email string `json:"email"`
 }
 
@@ -210,7 +210,7 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 	if !approval.Approve {
 		_, err := b.rdb.Get(ctx, approval.Email).Result()
 		if err == redis.Nil {
-			c.JSON(400, gin.H{"error": "No registration data found for this email"})
+			c.JSON(400, gin.H{"error": "No registration data found for this email1"})
 			return
 		} else if err != nil {
 			log.Printf("Redis error: %v", err)
@@ -231,7 +231,7 @@ func (b *BazaStruct) AdminApprove(c *gin.Context) {
 
 	dataJson, err := b.rdb.Get(ctx, approval.Email).Result()
 	if err == redis.Nil {
-		c.JSON(400, gin.H{"error": "No registration data found for this email"})
+		c.JSON(400, gin.H{"error": "No registration data found for this email2"})
 		return
 	} else if err != nil {
 		log.Printf("Redis error: %v", err)

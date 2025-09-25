@@ -92,7 +92,6 @@ func StartFileWatcher_Python() {
 		panic(err)
 	}
 
-	// Faylni kuzatishga qo'shish
 	err = watcher.Add(filename)
 	if err != nil {
 		log.Println("Faylni kuzatishga qo'shishda xato:", err)
@@ -162,10 +161,10 @@ func broadcastUpdate(data map[string]int64) {
 	}
 
 	if string(message) == string(lastSentData) {
-		return // Agar ma'lumot oldingi yuborilgan ma'lumot bilan bir xil bo'lsa, yuborilmaydi
+		return
 	}
 
-	lastSentData = message // Yangi ma'lumotni saqlab qo'yamiz
+	lastSentData = message
 
 	for client := range clients {
 		err := client.WriteMessage(websocket.TextMessage, message)

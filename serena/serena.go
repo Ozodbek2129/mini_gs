@@ -1,31 +1,22 @@
-package dataspost
+package serena
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
-type DatasStruct struct {
-	Id    string `json:"id"`
+type SerenaStruct struct {
 	Key   string `json:"key"`
 	Value int64  `json:"value"`
 }
 
-var (
-	filename       = "datas.json"
-	LastSeen       = make(map[string]time.Time)
-	KeyById        = make(map[string]string) // id -> key
-	LastSeenMutex  sync.Mutex
-	WriteDataMutex sync.Mutex
-)
+var filename = "serena.json"
 
 func readJSONFile() (map[string]int64, error) {
 	file, err := ioutil.ReadFile(filename)
@@ -50,80 +41,42 @@ func writeJSONFile(data map[string]int64) error {
 	return ioutil.WriteFile(filename, fileData, 0644)
 }
 
-func DatasPost(c *gin.Context) {
-
-	var data DatasStruct
-
+func SerenaPost(c *gin.Context) {
+	var data SerenaStruct
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	data1, err := readJSONFile()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
+		c.JSON(500, gin.H{"error": "Failed to read JSON file"})
 		return
 	}
 
 	if _, exists := data1[data.Key]; exists {
 		data1[data.Key] = data.Value
-		err = writeJSONFile(data1)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update JSON file"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "Value updated successfully"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"message": "Key not found, no changes made"})
+		data1[data.Key] = data.Value
 	}
-
-	// Update last seen time
-	LastSeenMutex.Lock()
-	LastSeen[data.Id] = time.Now()
-	KeyById[data.Id] = data.Key
-	LastSeenMutex.Unlock()
-}
-
-func StartTimeoutChecker() {
-	ticker := time.NewTicker(1 * time.Second)
-	for range ticker.C {
-		now := time.Now()
-
-		LastSeenMutex.Lock()
-		for id, t := range LastSeen {
-			if now.Sub(t) > 2*time.Second {
-				key := KeyById[id]
-
-				// update value to 0
-				data1, err := readJSONFile()
-				if err != nil {
-					continue
-				}
-				if data1[key] != 0 && (key == "Pastga" || key == "Pastga2" || key == "Tepaga" || key == "Tepaga2"){
-					data1[key] = 0
-					_ = writeJSONFile(data1)
-				}
-
-				// remove from maps (optional)
-				delete(LastSeen, id)
-				delete(KeyById, id)
-			}
-		}
-		LastSeenMutex.Unlock()
-	}
-}
-
-func DatasRead(c *gin.Context) {
-
-	data, err := readJSONFile()
+	err = writeJSONFile(data1)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JSON file"})
+		c.JSON(500, gin.H{"error": "Failed to write JSON file"})
 		return
 	}
-
-	c.JSON(http.StatusOK, data)
+	c.JSON(200, gin.H{"message": "Data updated successfully"})
 }
 
+func SerenaGet(c *gin.Context) {
+	data1, err := readJSONFile()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to read JSON file"})
+		return
+	}
+	c.JSON(200, data1)
+}
+
+// ------------------------------------------------------------------------------
 var clients = make(map[*websocket.Conn]bool)
 var watcher *fsnotify.Watcher
 var lastSentData []byte
@@ -134,14 +87,13 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func StartFileWatcher_datas() {
+func StartFileWatcher_serena() {
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
 	}
 
-	// Faylni kuzatishga qo'shish
 	err = watcher.Add(filename)
 	if err != nil {
 		log.Println("Faylni kuzatishga qo'shishda xato:", err)
@@ -158,7 +110,7 @@ func watchFileChanges() {
 				return
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Println("datas.json fayli o'zgardi, mijozlarga yuborilmoqda")
+				log.Println("serena.json fayli o'zgardi, mijozlarga yuborilmoqda")
 
 				updatedData, err := readJSONFile()
 
@@ -175,7 +127,7 @@ func watchFileChanges() {
 	}
 }
 
-func WebSocketHandler_datas(c *gin.Context) {
+func WebSocketHandler_serena(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("WebSocket ulanishida xato:", err)
@@ -211,10 +163,10 @@ func broadcastUpdate(data map[string]int64) {
 	}
 
 	if string(message) == string(lastSentData) {
-		return // Agar ma'lumot oldingi yuborilgan ma'lumot bilan bir xil bo'lsa, yuborilmaydi
+		return 
 	}
 
-	lastSentData = message // Yangi ma'lumotni saqlab qo'yamiz
+	lastSentData = message
 
 	for client := range clients {
 		err := client.WriteMessage(websocket.TextMessage, message)

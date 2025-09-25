@@ -2,10 +2,14 @@ package main
 
 import (
 	minigs12 "gs/1_2_minigs"
+	fcmsignal "gs/FCM_signal"
 	"gs/add_image"
 	booling "gs/booling/bollling_kamera"
+	"gs/malumotlar"
+	microgsdatablokread1 "gs/micro_gs_data_blok_read_1"
 	"gs/monitoring"
 	"gs/python_error"
+	"gs/serena"
 
 	// haftalik2 "gs/2haftalik"
 	"gs/baza"
@@ -49,8 +53,11 @@ func main() {
 	// haftalik := haftalik2.NewHaftalik2Struct(db)
 	monitor := monitoring.NewBazaStructMonitor(db)
 
+	fcm := fcmsignal.NewBazaFcmStruct(db)
+	malumotlarr := malumotlar.NewMalumotlarRepo(db)
+
 	go micro_gs_data_blok_read.StartWatcherMicroGs()
-	go micro_gs_data_blok_read.StartWatcherMicroGs1()
+	go microgsdatablokread1.StartWatcherMicroGs1()
 	go dataspost.StartFileWatcher_datas()
 	// go haftalik.StartDatabaseListener()
 	go minigs12.StartFileWatcher_minigs12()
@@ -58,14 +65,18 @@ func main() {
 	go booling.StartFileWatcher_Python_Bool()
 	go booling_kamera.StartFileWatcher_Python_kamera()
 	go newfunc.WatchDatabase()
+	go serena.StartFileWatcher_serena()
+
+	go dataspost.StartTimeoutChecker()
+	fcmsignal.InitFirebase()
 
 	router.GET("/micro_gs_data_blok_read", micro_gs_data_blok_read.MicroGsDataBlokRead)
 	router.POST("/micro_gs_data_blok_post", micro_gs_data_blok_read.MicroGsDataBlokPost)
 	router.GET("/micro_gs_data_blok_ws", micro_gs_data_blok_read.WebSocketHandler)
 
-	router.POST("/micro_gs_data_blok_post1", micro_gs_data_blok_read.MicroGsDataBlokPost1)
-	router.GET("/micro_gs_data_blok_read1", micro_gs_data_blok_read.MicroGsDataBlokRead1)
-	router.GET("/micro_gs_data_blok_ws1", micro_gs_data_blok_read.WebSocketHandler1)
+	router.POST("/micro_gs_data_blok_post1", microgsdatablokread1.MicroGsDataBlokPost1)
+	router.GET("/micro_gs_data_blok_read1", microgsdatablokread1.MicroGsDataBlokRead1)
+	router.GET("/micro_gs_data_blok_ws1", microgsdatablokread1.WebSocketHandler1)
 
 	router.GET("/datas_get", dataspost.DatasRead)
 	router.POST("/datas_post", dataspost.DatasPost)
@@ -77,9 +88,9 @@ func main() {
 	router.GET("/login", newfunc.Login)
 	router.DELETE("/delete", newfunc.Delete)
 	router.POST("/get-email", newfunc.GetEmail)
-	router.PUT("/active",newfunc.Active)
+	router.PUT("/active", newfunc.Active)
 	router.GET("/getall", newfunc.GetAll)
-	router.GET("/getall_ws",newfunc.HandleWebSocket)
+	router.GET("/getall_ws", newfunc.HandleWebSocket)
 
 	router.POST("/upload_image", add_image.UploadMedia)
 	router.POST("/post_monitor_download", monitor.HandleExportMonitoring)
@@ -104,6 +115,16 @@ func main() {
 	router.POST("/python_bool", booling.BoolingPostPython)
 	router.GET("/python_read", booling.BoolingReadPython)
 	router.GET("/python_ws", booling.WebSocketHandler_Python_Bool)
+
+	router.POST("/serena_post", serena.SerenaPost)
+	router.GET("/serena_get", serena.SerenaGet)
+	router.GET("/serena_ws", serena.WebSocketHandler_serena)
+
+	router.POST("/registerfcm", fcm.RegisterHandler)
+	router.GET("/notify", fcm.NotifyAllHandler)
+
+	router.POST("/malumotlarpost", malumotlarr.MalumotlarPost)
+	router.GET("/malumotlarget", malumotlarr.MalumotlarGet)
 
 	router.Run(":9090")
 }
