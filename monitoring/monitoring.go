@@ -14,7 +14,6 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-// Monitoring struktura
 type Monitoring struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
@@ -23,26 +22,20 @@ type Monitoring struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-
-// BazaStruct
 type BazaStruct struct {
 	db *sql.DB
 }
 
-// RequestBody
 type RequestBody struct {
 	StartDate string `json:"start_date" binding:"required"`
 	EndDate   string `json:"end_date" binding:"required"`
 }
 
-// NewBazaStruct
 func NewBazaStructMonitor(db *sql.DB) *BazaStruct {
 	return &BazaStruct{db: db}
 }
 
-// getMonitoringByDateRange
 func (b *BazaStruct) getMonitoringByDateRange(startDate, endDate string) ([]Monitoring, error) {
-	// Sana va vaqtni aniq belgilash
 	startDateTime := fmt.Sprintf("%s 00:00:00", startDate)
 	endDateTime := fmt.Sprintf("%s 23:59:59.999999", endDate)
 
@@ -76,33 +69,27 @@ func (b *BazaStruct) getMonitoringByDateRange(startDate, endDate string) ([]Moni
 	return monitoringList, nil
 }
 
-// exportMonitoringToExcel
 func exportMonitoringToExcel(monitoringList []Monitoring) (*excelize.File, error) {
 	f := excelize.NewFile()
 	sheet := "Monitoring"
 	f.SetSheetName("Sheet1", sheet)
 
-	// Sarlavhalar
 	headers := []string{"ID", "Email", "Boshqaruv", "Value", "CreatedAt"}
 	for col, header := range headers {
 		cell := fmt.Sprintf("%c1", 'A'+col)
 		f.SetCellValue(sheet, cell, header)
 	}
 
-	// Ma'lumotlarni yozish
 	for row, m := range monitoringList {
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row+2), m.ID)
 		f.SetCellValue(sheet, fmt.Sprintf("B%d", row+2), m.Email)
 		f.SetCellValue(sheet, fmt.Sprintf("C%d", row+2), m.Boshqaruv)
 		f.SetCellValue(sheet, fmt.Sprintf("D%d", row+2), m.Value)
-		// CreatedAt ni DD/MM/YYYY HH:MM:SS formatida yozish
 		f.SetCellValue(sheet, fmt.Sprintf("E%d", row+2), m.CreatedAt.Format("02/01/2006 15:04:05"))
 	}
 
-	// Ustun kengligini sozlash
 	f.SetColWidth(sheet, "A", "E", 25)
 
-	// Sarlavhalarga format
 	style, _ := f.NewStyle(&excelize.Style{
 		Font: &excelize.Font{Bold: true},
 		Fill: excelize.Fill{Type: "pattern", Color: []string{"#E0EBF5"}, Pattern: 1},
@@ -112,7 +99,6 @@ func exportMonitoringToExcel(monitoringList []Monitoring) (*excelize.File, error
 	return f, nil
 }
 
-// handleExportMonitoring
 func (b *BazaStruct) HandleExportMonitoring(c *gin.Context) {
 	var req RequestBody
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -123,7 +109,6 @@ func (b *BazaStruct) HandleExportMonitoring(c *gin.Context) {
 
 	log.Printf("So'rov qabul qilindi: start_date=%s, end_date=%s", req.StartDate, req.EndDate)
 
-	// Sana formatini tekshirish
 	_, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
 		log.Println("start_date formati xatosi:", err)
@@ -137,7 +122,6 @@ func (b *BazaStruct) HandleExportMonitoring(c *gin.Context) {
 		return
 	}
 
-	// Ma'lumotlarni olish
 	monitoringList, err := b.getMonitoringByDateRange(req.StartDate, req.EndDate)
 	if err != nil {
 		log.Println("Monitoring ma'lumotlarini olish xatosi:", err)
@@ -147,14 +131,12 @@ func (b *BazaStruct) HandleExportMonitoring(c *gin.Context) {
 
 	log.Printf("Topilgan yozuvlar soni: %d", len(monitoringList))
 
-	// Agar ma'lumotlar bo'lmasa
 	if len(monitoringList) == 0 {
 		log.Println("Ma'lumot topilmadi:", req.StartDate, "dan", req.EndDate, "gacha")
 		c.JSON(http.StatusOK, gin.H{"message": "Berilgan sanalarda ma'lumot topilmadi"})
 		return
 	}
 
-	// Excel fayl yaratish
 	f, err := exportMonitoringToExcel(monitoringList)
 	if err != nil {
 		log.Println("Excel fayl yaratish xatosi:", err)
@@ -162,17 +144,14 @@ func (b *BazaStruct) HandleExportMonitoring(c *gin.Context) {
 		return
 	}
 
-	// Fayl nomini dinamik shakllantirish
 	filename := fmt.Sprintf("monitoring_%s_to_%s.xlsx", strings.ReplaceAll(req.StartDate, "-", ""), strings.ReplaceAll(req.EndDate, "-", ""))
 
-	// Excel faylni to'g'ri yuborish
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Expires", "0")
 
-	// Faylni yozish
 	if err := f.Write(c.Writer); err != nil {
 		log.Println("Excel fayl yuborish xatosi:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Fayl yuborishda xato"})

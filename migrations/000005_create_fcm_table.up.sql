@@ -1,0 +1,7 @@
+CREATE TABLE if NOT EXISTS fcm (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fcmtoken text NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    update_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    deleted_at TIMESTAMP
+);

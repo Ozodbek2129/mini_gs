@@ -12,19 +12,21 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main cmd/main.go
 
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
+# CA sertifikatlarni o‘rnatish uchun qo‘shildi
+RUN apt-get update && apt-get install -y libc6 ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /app/main .
-
-COPY --from=builder /app/datas.json  ./datas.json
-COPY --from=builder /app/micro_gs.json  ./micro_gs.json 
-COPY --from=builder /app/micro_gs1.json  ./micro_gs1.json 
-COPY --from=builder /app/minigs12.json  ./minigs12.json 
-COPY --from=builder /app/booling.json  ./booling.json 
-COPY --from=builder /app/booling_python_error.json  ./booling_python_error.json 
-COPY --from=builder /app/python_error.json  ./python_error.json 
+COPY --from=builder /app/datas.json ./datas.json
+COPY --from=builder /app/micro_gs.json ./micro_gs.json 
+COPY --from=builder /app/micro_gs1.json ./micro_gs1.json 
+COPY --from=builder /app/minigs12.json ./minigs12.json 
+COPY --from=builder /app/booling.json ./booling.json 
+COPY --from=builder /app/booling_python_error.json ./booling_python_error.json 
+COPY --from=builder /app/python_error.json ./python_error.json 
+COPY --from=builder /app/serena.json ./serena.json
+COPY --from=builder /app/serviceAccountKey.json ./serviceAccountKey.json
 COPY --from=builder /app/email/template.html ./email/
 COPY --from=builder /app/.env .
 
