@@ -35,7 +35,7 @@ services:
       - app_network
     restart: always
 
-  migrate:
+  migrate: 
     image: migrate/migrate
     volumes:
       - ./migrations:/migrations
