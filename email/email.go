@@ -29,7 +29,7 @@ func Email(email string) (string, error) {
 
 func SendCode(email string, code string) error {
 	from := "articanconnection@gmail.com"
-	password := "ozjx ypdu ytsx zlqd"
+	password := "inzr pnmv twtv tfbo"
 
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "465"
