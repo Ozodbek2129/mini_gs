@@ -88,5 +88,10 @@
     "modul_temperatura": 0,
     "rpm": 0,
     "shassi_temperatura": 0
+  },
+  "level_of_water": {
+    "level_of_water[0]": 0,
+    "level_of_water[1]": 0,
+    "level of water[2]": 0
   }
 }
