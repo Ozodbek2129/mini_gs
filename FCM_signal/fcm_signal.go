@@ -61,6 +61,7 @@ func (b *BazaFcmStruct) RegisterHandler(c *gin.Context) {
 	}
 
 	TokenLock.Lock()
+	TokenLock.Unlock()
 
 	query := `insert into fcm (
 								id, fcmtoken, created_at, update_at
