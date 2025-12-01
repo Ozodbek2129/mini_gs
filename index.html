@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Suv darajasi animatsiyasi — PRO versiya</title>
+  <style>
+    :root{
+      --width:360px;
+      --height:480px;
+    }
+    body{
+      font-family:Inter,system-ui,Segoe UI,Arial;
+      margin:24px;
+      background:#0b1220;
+      color:#e6eef8;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      align-items:center;
+    }
+    .card{
+      width:var(--width);
+      background:linear-gradient(180deg,#0f1724 0%, #071028 100%);
+      border-radius:12px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(3,7,18,.6);
+    }
+    h1{font-size:16px;margin:0 0 8px}
+    .stage{
+      width:100%;height:var(--height);
+      background:linear-gradient(180deg,#071026 0%, #04233a 100%);
+      border-radius:8px;overflow:hidden;position:relative;
+    }
+    .stage svg{width:100%;height:100%;display:block}
+    .level-label{
+      position:absolute;left:50%;transform:translateX(-50%);
+      top:14px;background:rgba(255,255,255,.06);
+      padding:6px 10px;border-radius:999px;font-weight:600;
+    }
+
+    /* Wave smooth continuous flow */
+    .wave{animation:moveWave 4s linear infinite}
+    @keyframes moveWave{from{transform:translateX(0)}to{transform:translateX(-360px)}}
+
+    #waterGroup{transition:transform 0.9s cubic-bezier(.22,.9,.25,1)}
+
+    /* Bubble animations */
+    .bubble{
+      position:absolute;
+      bottom:-10px;
+      width:8px;height:8px;
+      background:rgba(255,255,255,0.45);
+      border-radius:50%;
+      animation:bubbleUp 5s linear infinite;
+    }
+
+    @keyframes bubbleUp{
+      0%{transform:translateY(0) scale(1);opacity:.6}
+      80%{opacity:1}
+      100%{transform:translateY(-420px) scale(1.8);opacity:0}
+    }
+
+    /* Glass shine on top */
+    .glass-top{
+      position:absolute;
+      top:26px;left:0;width:100%;height:40px;
+      background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0));
+      pointer-events:none;
+    }
+
+    /* Controls */
+    .controls{display:flex;gap:8px;margin-top:10px;align-items:center}
+    .controls input[type=range]{flex:1}
+    .controls input[type=number]{width:80px;padding:6px;border-radius:6px;border:none;background:#021226;color:#e6eef8}
+    .btn{padding:8px 12px;border-radius:8px;border:0;background:#0ea5a4;color:#021226;font-weight:700;cursor:pointer}
+    .small{font-size:12px;color:#9fb2c6}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Suv darajasi — PRO animatsiya</h1>
+    <div class="small">To‘lqin kuchli, gradient, yorqinlik, shisha effekt va pufakchalar qo‘shildi.</div>
+
+    <div class="stage" id="stage">
+      <div class="level-label" id="levelLabel">Daraja: 50</div>
+      <div class="glass-top"></div>
+
+      <!-- Bubbles container -->
+      <div id="bubbleLayer"></div>
+
+      <svg viewBox="0 0 360 480" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="containerClip">
+            <rect x="12" y="30" rx="12" ry="12" width="336" height="420" />
+          </clipPath>
+        </defs>
+
+        <rect x="10" y="28" rx="14" ry="14" width="340" height="424" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2" />
+
+        <g id="waterGroup" clip-path="url(#containerClip)">
+          <g class="wave" transform="translate(0,0)">
+            <path d="M0 350 C50 300 150 400 240 330 C310 290 360 380 360 380 V480 H0 Z" fill="#3ec5ff" opacity="0.95"></path>
+            <path d="M0 365 C80 330 160 410 260 350 C330 310 360 390 360 420 V480 H0 Z" fill="#2bb0ef" opacity="0.85"></path>
+          </g>
+          <g class="wave" transform="translate(360,0)">
+            <path d="M0 355 C70 310 130 420 230 340 C300 300 360 380 360 400 V480 H0 Z" fill="#1ca0e0" opacity="0.75"></path>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="controls">
+      <input id="slider" type="range" min="0" max="100" value="50" />
+      <input id="num" type="number" min="0" max="100" value="50" />
+      <button id="simBtn" class="btn">Simulate</button>
+    </div>
+  </div>
+
+  <script>
+    const MIN=0, MAX=100;
+
+    const slider=document.getElementById('slider');
+    const num=document.getElementById('num');
+    const label=document.getElementById('levelLabel');
+    const water=document.getElementById('waterGroup');
+    const simBtn=document.getElementById('simBtn');
+    const bubbleLayer=document.getElementById('bubbleLayer');
+
+    let current=50, simInterval=null;
+
+    function levelToY(level){
+      const h=420;
+      return h * (1 - level/100);
+    }
+
+    function update(level){
+      const y=levelToY(level);
+      water.style.transform=`translate3d(0, ${y}px,0)`;
+      label.textContent=`Daraja: ${Math.round(level)}`;
+      slider.value=num.value=current=Math.round(level);
+    }
+
+    window.setLevel=value=>{
+      value=Math.max(MIN,Math.min(MAX,Number(value)));
+      update(value);
+    }
+
+    slider.oninput=e=>setLevel(e.target.value);
+    num.onchange=e=>setLevel(e.target.value);
+
+    simBtn.onclick=()=>{
+      if(simInterval){clearInterval(simInterval);simInterval=null;simBtn.textContent='Simulate';return;}
+      simBtn.textContent='Stop';
+      simInterval=setInterval(()=>{
+        setLevel(current+(Math.random()*12-6));
+      },600);
+    }
+
+    // Bubble generator
+    function makeBubble(){
+      const b=document.createElement('div');
+      b.className='bubble';
+      b.style.left=Math.random()*300+30+'px';
+      b.style.animationDuration=3+Math.random()*3+'s';
+      bubbleLayer.appendChild(b);
+      setTimeout(()=>b.remove(),6000);
+    }
+    setInterval(makeBubble,650);
+
+    update(current);
+  </script>
+</body>
+</html>
