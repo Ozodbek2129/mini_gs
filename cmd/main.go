@@ -6,6 +6,7 @@ import (
 	"gs/add_image"
 	booling "gs/booling/bollling_kamera"
 	"gs/malumotlar"
+	"gs/malumotlarqizil"
 	microgsdatablokread1 "gs/micro_gs_data_blok_read_1"
 	"gs/monitoring"
 	"gs/python_error"
@@ -55,6 +56,7 @@ func main() {
 
 	fcm := fcmsignal.NewBazaFcmStruct(db)
 	malumotlarr := malumotlar.NewMalumotlarRepo(db)
+	malumotlarrqizil := malumotlarqizil.NewMalumotlarRepoqizil(db)
 
 	go micro_gs_data_blok_read.StartWatcherMicroGs()
 	go microgsdatablokread1.StartWatcherMicroGs1()
@@ -125,6 +127,9 @@ func main() {
 
 	router.POST("/malumotlarpost", malumotlarr.MalumotlarPost)
 	router.GET("/malumotlarget", malumotlarr.MalumotlarGet)
+
+	router.POST("/malumotlarpostqizil", malumotlarrqizil.MalumotlarPostqizil)
+	router.GET("/malumotlargetqizil", malumotlarrqizil.MalumotlarGetqizil)
 
 	router.Run(":9090")
 }
